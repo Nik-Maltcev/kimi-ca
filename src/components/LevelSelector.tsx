@@ -1,11 +1,12 @@
 import type { Difficulty } from '@/types/quiz';
 import { getQuestionCount } from '@/data/questions';
-import { Brain, Zap, Trophy, Sparkles, AlertCircle } from 'lucide-react';
+import { Brain, Zap, Trophy, Sparkles, AlertCircle, BarChart3 } from 'lucide-react';
 
 interface LevelSelectorProps {
   onSelect: (difficulty: Difficulty) => void;
   isAiAvailable: boolean;
   aiStatusMessage: string;
+  onShowProgress: () => void;
 }
 
 const levels: {
@@ -46,7 +47,7 @@ const levels: {
   },
 ];
 
-export function LevelSelector({ onSelect, isAiAvailable, aiStatusMessage }: LevelSelectorProps) {
+export function LevelSelector({ onSelect, isAiAvailable, aiStatusMessage, onShowProgress }: LevelSelectorProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full animate-fade-in">
@@ -137,6 +138,17 @@ export function LevelSelector({ onSelect, isAiAvailable, aiStatusMessage }: Leve
               Тема 7: Протоколы и безопасность
             </div>
           </div>
+        </div>
+
+        {/* Progress button */}
+        <div className="mt-4">
+          <button
+            onClick={onShowProgress}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors cursor-pointer shadow-sm"
+          >
+            <BarChart3 className="w-5 h-5 text-violet-500" />
+            Мой прогресс
+          </button>
         </div>
       </div>
     </div>

@@ -2,11 +2,13 @@ import { useState, useCallback } from 'react';
 import { LevelSelector } from '@/components/LevelSelector';
 import { Quiz } from '@/components/Quiz';
 import { Results } from '@/components/Results';
+import { Progress } from '@/components/Progress';
 import { useQuestions } from '@/hooks/useQuestions';
-import type { Difficulty, UserAnswer } from '@/types/quiz';
+import { saveSession } from '@/lib/progress';
+import type { Difficulty, UserAnswer, Question } from '@/types/quiz';
 import './App.css';
 
-type Screen = 'level' | 'quiz' | 'results';
+type Screen = 'level' | 'quiz' | 'results' | 'progress';
 
 function App() {
   const [screen, setScreen] = useState<Screen>('level');
@@ -32,10 +34,39 @@ function App() {
     setScreen('quiz');
   }, []);
 
+  const getActiveQuestions = useCallback((): Question[] => {
+    if (isRetryMode) {
+      return questions.filter((q) => wrongQuestionIds.includes(q.id));
+    }
+    return questions;
+  }, [questions, isRetryMode, wrongQuestionIds]);
+
   const handleFinishQuiz = useCallback((answers: UserAnswer[]) => {
     setLastAnswers(answers);
+
+    // Save progress
+    const activeQuestions = getActiveQuestions();
+    const correctCount = activeQuestions.filter((q) => {
+      const userAnswer = answers.find((a) => a.questionId === q.id);
+      const selected = userAnswer?.selectedAnswers || [];
+      return (
+        selected.length === q.correctAnswers.length &&
+        selected.every((a) => q.correctAnswers.includes(a))
+      );
+    }).length;
+
+    saveSession({
+      difficulty: difficulty!,
+      totalQuestions: activeQuestions.length,
+      correctAnswers: correctCount,
+      percentage: activeQuestions.length > 0
+        ? Math.round((correctCount / activeQuestions.length) * 100)
+        : 0,
+      isRetry: isRetryMode,
+    });
+
     setScreen('results');
-  }, []);
+  }, [difficulty, isRetryMode, getActiveQuestions]);
 
   const handleRetryWrong = useCallback((ids: number[]) => {
     setWrongQuestionIds(ids);
@@ -63,6 +94,7 @@ function App() {
           onSelect={handleSelectLevel}
           isAiAvailable={isAiAvailable}
           aiStatusMessage={aiStatusMessage}
+          onShowProgress={() => setScreen('progress')}
         />
       )}
 
@@ -95,6 +127,10 @@ function App() {
           onRetryWrong={handleRetryWrong}
           onRestart={handleRestart}
         />
+      )}
+
+      {screen === 'progress' && (
+        <Progress onBack={() => setScreen('level')} />
       )}
     </div>
   );
