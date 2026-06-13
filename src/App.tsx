@@ -85,7 +85,11 @@ function App() {
       {screen === 'results' && difficulty && (
         <Results
           difficulty={difficulty}
-          questions={questions}
+          questions={
+            isRetryMode
+              ? questions.filter((q) => wrongQuestionIds.includes(q.id))
+              : questions
+          }
           answers={lastAnswers}
           isAiAvailable={isAiAvailable}
           onRetryWrong={handleRetryWrong}
