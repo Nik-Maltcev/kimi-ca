@@ -1,22 +1,26 @@
 import {
-  mysqlTable,
-  mysqlEnum,
+  pgTable,
+  pgEnum,
   serial,
   varchar,
   text,
   timestamp,
   json,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 
-export const generatedQuestions = mysqlTable("generated_questions", {
+export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
+export const multipleCorrectEnum = pgEnum("multiple_correct", ["yes", "no"]);
+export const sourceEnum = pgEnum("source", ["ai", "static"]);
+
+export const generatedQuestions = pgTable("generated_questions", {
   id: serial("id").primaryKey(),
-  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).notNull(),
+  difficulty: difficultyEnum("difficulty").notNull(),
   topic: varchar("topic", { length: 100 }).notNull(),
   question: text("question").notNull(),
   options: json("options").$type<string[]>().notNull(),
   correctAnswers: json("correct_answers").$type<number[]>().notNull(),
-  multipleCorrect: mysqlEnum("multiple_correct", ["yes", "no"]).notNull(),
-  source: mysqlEnum("source", ["ai", "static"]).notNull().default("ai"),
+  multipleCorrect: multipleCorrectEnum("multiple_correct").notNull(),
+  source: sourceEnum("source").notNull().default("ai"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
