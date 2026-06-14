@@ -83,9 +83,8 @@ export function useQuestions(difficulty: Difficulty | null): UseQuestionsReturn 
       };
 
       const selectedTopics = topics[difficulty];
-      // Pick 3-5 random topics for variety
-      const shuffledTopics = [...selectedTopics].sort(() => Math.random() - 0.5);
-      const topicsToGenerate = shuffledTopics.slice(0, 5);
+      // Use ALL topics, 3 questions each
+      const topicsToGenerate = [...selectedTopics].sort(() => Math.random() - 0.5);
 
       async function generateAll() {
         const allQuestions: Question[] = [];
