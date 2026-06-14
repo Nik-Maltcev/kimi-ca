@@ -37,20 +37,7 @@ export const aiRouter = createRouter({
       try {
         const questions = input.topic
           ? await generateQuestions(input.topic, input.difficulty, input.count)
-          : []; // bulk generation handled separately
-
-        // Save to DB
-        const dbQuestions = questions.map((q) => ({
-          difficulty: input.difficulty,
-          topic: input.topic || "General",
-          question: q.question,
-          options: q.options,
-          correctAnswers: q.correctAnswers,
-          multipleCorrect: q.multipleCorrect ? ("yes" as const) : ("no" as const),
-          source: "ai" as const,
-        }));
-
-        await createManyGeneratedQuestions(dbQuestions);
+          : [];
 
         return { success: true, generated: questions.length, questions };
       } catch (e: any) {
