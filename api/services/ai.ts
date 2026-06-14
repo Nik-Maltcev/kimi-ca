@@ -1,5 +1,7 @@
 import { env } from "../lib/env";
 import { HttpClient } from "../lib/http";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 interface AIMessage {
   role: "system" | "user" | "assistant";
@@ -19,6 +21,62 @@ const httpClient = new HttpClient(env.moonshotApiUrl, {
     ? { Authorization: `Bearer ${env.moonshotApiKey}` }
     : {},
 });
+
+// Load knowledge base files
+const knowledgeFiles: Record<string, string> = {};
+
+function loadKnowledge() {
+  const topics = [
+    "topic1-requirements",
+    "topic2-modeling",
+    "topic3-databases",
+    "topic4-integration",
+    "topic5-architecture",
+    "topic6-methodologies",
+    "topic7-security",
+  ];
+
+  for (const topic of topics) {
+    try {
+      const filePath = resolve(process.cwd(), `knowledge/${topic}.md`);
+      knowledgeFiles[topic] = readFileSync(filePath, "utf-8");
+    } catch (e) {
+      console.error(`Failed to load knowledge file: ${topic}`, e);
+    }
+  }
+}
+
+loadKnowledge();
+
+// Map topic keywords to knowledge files
+function getRelevantKnowledge(topic: string): string {
+  const topicLower = topic.toLowerCase();
+
+  if (topicLower.includes("требовани") || topicLower.includes("user story") || topicLower.includes("use case") || topicLower.includes("гост") || topicLower.includes("стейкхолдер") || topicLower.includes("srs") || topicLower.includes("верификац") || topicLower.includes("валидац") || topicLower.includes("invest") || topicLower.includes("артефакт") || topicLower.includes("постановк")) {
+    return knowledgeFiles["topic1-requirements"] || "";
+  }
+  if (topicLower.includes("bpmn") || topicLower.includes("uml") || topicLower.includes("нотаци") || topicLower.includes("диаграмм") || topicLower.includes("sequence") || topicLower.includes("шлюз") || topicLower.includes("событи") || topicLower.includes("моделиров")) {
+    return knowledgeFiles["topic2-modeling"] || "";
+  }
+  if (topicLower.includes("бд") || topicLower.includes("баз") || topicLower.includes("sql") || topicLower.includes("нормализ") || topicLower.includes("транзакц") || topicLower.includes("acid") || topicLower.includes("индекс") || topicLower.includes("ключ") || topicLower.includes("join") || topicLower.includes("шардир") || topicLower.includes("реплик") || topicLower.includes("партицион")) {
+    return knowledgeFiles["topic3-databases"] || "";
+  }
+  if (topicLower.includes("api") || topicLower.includes("rest") || topicLower.includes("soap") || topicLower.includes("интеграц") || topicLower.includes("синхрон") || topicLower.includes("асинхрон") || topicLower.includes("kafka") || topicLower.includes("rabbit") || topicLower.includes("graphql") || topicLower.includes("websocket") || topicLower.includes("grpc") || topicLower.includes("webhook") || topicLower.includes("очеред") || topicLower.includes("шина") || topicLower.includes("xml") || topicLower.includes("json") || topicLower.includes("идемпотент") || topicLower.includes("http") || topicLower.includes("метод")) {
+    return knowledgeFiles["topic4-integration"] || "";
+  }
+  if (topicLower.includes("архитектур") || topicLower.includes("микросервис") || topicLower.includes("монолит") || topicLower.includes("soa") || topicLower.includes("хореограф") || topicLower.includes("оркестрац") || topicLower.includes("cap") || topicLower.includes("gateway") || topicLower.includes("баланс") || topicLower.includes("event sourc")) {
+    return knowledgeFiles["topic5-architecture"] || "";
+  }
+  if (topicLower.includes("методолог") || topicLower.includes("scrum") || topicLower.includes("kanban") || topicLower.includes("agile") || topicLower.includes("waterfall") || topicLower.includes("спринт") || topicLower.includes("аналитик") || topicLower.includes("оценк") || topicLower.includes("декомпозиц") || topicLower.includes("dor") || topicLower.includes("dod") || topicLower.includes("story point")) {
+    return knowledgeFiles["topic6-methodologies"] || "";
+  }
+  if (topicLower.includes("протокол") || topicLower.includes("безопасн") || topicLower.includes("шифрован") || topicLower.includes("jwt") || topicLower.includes("oauth") || topicLower.includes("аутентиф") || topicLower.includes("авториз") || topicLower.includes("https") || topicLower.includes("dns") || topicLower.includes("url")) {
+    return knowledgeFiles["topic7-security"] || "";
+  }
+
+  // Fallback: return all knowledge
+  return Object.values(knowledgeFiles).join("\n\n");
+}
 
 export function isAiAvailable(): boolean {
   return !!env.moonshotApiKey;
@@ -40,16 +98,31 @@ export async function generateQuestions(
     throw new Error("MOONSHOT_API_KEY not configured");
   }
 
+  const knowledge = getRelevantKnowledge(topic);
+
   const difficultyDesc = {
-    easy: "базовые определения, один правильный ответ",
-    medium: "множественный выбор (несколько правильных ответов возможны), применение знаний",
-    hard: "кейсовые задачи, глубокое понимание, несколько правильных ответов",
+    easy: "базовые определения, один правильный ответ. Проверяй знание фактов и терминов из материала.",
+    medium: "множественный выбор (несколько правильных ответов возможны), применение знаний. Проверяй понимание связей между концепциями.",
+    hard: "кейсовые задачи, глубокое понимание, несколько правильных ответов. Проверяй умение применять знания в практических ситуациях.",
   };
 
-  const prompt = `Сгенерируй ${count} вопросов по системному анализу на тему: "${topic}".
+  const prompt = `Вот учебный материал по системному анализу:
+
+---
+${knowledge}
+---
+
+На основе ТОЛЬКО этого материала сгенерируй ${count} вопросов на тему: "${topic}".
 Уровень сложности: ${difficulty} — ${difficultyDesc[difficulty]}.
 
-ВАЖНО: ответь ТОЛЬКО в формате JSON-массива, без markdown, без пояснений:
+КРИТИЧЕСКИ ВАЖНО:
+- Генерируй вопросы СТРОГО по предоставленному материалу
+- НЕ выдумывай факты, которых нет в тексте выше
+- Правильные ответы должны точно соответствовать информации из материала
+- Каждый раз формулируй вопросы ПО-РАЗНОМУ — меняй формулировки, углы подачи, комбинируй факты
+- НЕ копируй вопросы из текста дословно — перефразируй
+
+Ответь ТОЛЬКО в формате JSON-массива:
 [
   {
     "question": "текст вопроса",
@@ -62,16 +135,15 @@ export async function generateQuestions(
 Правила:
 - options: ровно 4 варианта ответа
 - correctAnswers: массив индексов правильных ответов (0-based)
-- multipleCorrect: true если несколько правильных ответов, false если один
-- Вопросы должны быть на РУССКОМ языке
-- Не повторяй вопросы из типовых собеседований — придумывай оригинальные формулировки
-- Варианты должны быть правдоподобными, но только correctAnswers — правильные`;
+- multipleCorrect: true если несколько правильных, false если один
+- Вопросы на РУССКОМ языке
+- Варианты должны быть правдоподобными, но только correctAnswers — верные`;
 
   const messages: AIMessage[] = [
     {
       role: "system",
       content:
-        "Ты — эксперт по системному анализу. Генерируй точные, проверенные вопросы для тестирования знаний. Отвечай только JSON без markdown.",
+        "Ты — строгий экзаменатор по системному анализу. Генерируй вопросы ИСКЛЮЧИТЕЛЬНО на основе предоставленного учебного материала. Никогда не выдумывай информацию. Отвечай только JSON без markdown.",
     },
     { role: "user", content: prompt },
   ];
@@ -79,7 +151,7 @@ export async function generateQuestions(
   const response = await httpClient.post<AIResponse>("/chat/completions", {
     model: "moonshot-v1-8k",
     messages,
-    temperature: 0.8,
+    temperature: 0.9,
     max_tokens: 4000,
   });
 
@@ -121,50 +193,44 @@ export async function generateQuestionsForAllTopics(
     multipleCorrect: boolean;
   }>
 > {
+  if (!isAiAvailable()) {
+    throw new Error("MOONSHOT_API_KEY not configured");
+  }
+
   const topics: Record<string, string[]> = {
     easy: [
-      "Способы сбора требований (интервью, анкетирование, наблюдение)",
-      "Стейкхолдеры проекта и их роли",
-      "Виды требований: бизнес, пользовательские, функциональные, нефункциональные",
-      "User Story и критерий INVEST",
-      "ГОСТ 19 и ГОСТ 34",
-      "BPMN нотация: элементы и шлюзы",
-      "UML диаграммы: Use Case, Class, Sequence",
-      "Реляционные базы данных: нормализация, ключи, связи",
-      "ACID требования и транзакции",
-      "SQL: JOIN, GROUP BY, HAVING",
-      "REST API: методы, коды ответов, параметры",
-      "SOAP vs REST",
-      "Микросервисная архитектура vs монолит",
-      "Scrum и Kanban методологии",
-      "HTTP, HTTPS, JWT, шифрование",
+      "Способы сбора требований",
+      "Стейкхолдеры проекта",
+      "Виды требований",
+      "User Story и INVEST",
+      "BPMN нотация",
+      "UML диаграммы",
+      "Реляционные базы данных",
+      "REST API основы",
+      "Scrum и Kanban",
+      "HTTP и безопасность",
     ],
     medium: [
-      "Классификация нефункциональных требований (НФТ)",
-      "User Story Map (USM)",
-      "Use cases: структура, основной и альтернативный сценарии",
-      "BPMN: типы шлюзов (XOR, AND, OR, событийные)",
-      "Sequence диаграмма: фреймы (loop, alt, opt, par)",
-      "Нормализация БД: 1НФ, 2НФ, 3НФ",
-      "Денормализация: когда и зачем",
-      "Индексы, партиционирование, шардирование, репликация",
-      "REST: идемпотентность, stateless, кэширование",
-      "GraphQL, WebSocket, gRPC, Webhook",
-      "Kafka vs RabbitMQ, очереди vs топики",
-      "ESB корпоративная шина",
-      "CAP-теорема, Event Sourcing, API Gateway",
-      "Scrum: роли, артефакты, мероприятия, спринты",
-      "Оценка задач: Story Points vs часы, DoR, DoD, AC",
+      "Нефункциональные требования",
+      "Use cases и сценарии",
+      "BPMN шлюзы",
+      "Sequence диаграммы",
+      "Нормализация БД",
+      "REST идемпотентность и stateless",
+      "GraphQL и WebSocket",
+      "Kafka vs RabbitMQ",
+      "CAP-теорема",
+      "Scrum артефакты и мероприятия",
     ],
     hard: [
-      "Критерии хороших требований: верификация vs валидация",
-      "Шаблон постановки задачи: UI, бэкенд, интеграции",
-      "BPMN: моделирование сложных процессов с ветвлениями",
-      "Проектирование БД: ER-диаграммы, связи, оптимизация",
-      "Интеграция систем: синхронная vs асинхронная, очереди",
-      "REST API: версионирование, обратная совместимость, безопасность",
-      "Микросервисы: хореография vs оркестрация, Saga pattern",
-      "Безопасность: JWT, OAuth, шифрование, CSRF, XSS, CORS",
+      "Верификация vs валидация требований",
+      "Проектирование сложных интеграций",
+      "Микросервисы: хореография vs оркестрация",
+      "Безопасность: OAuth, JWT",
+      "Event Sourcing",
+      "Проектирование БД для высоких нагрузок",
+      "API версионирование и обратная совместимость",
+      "Архитектура: монолит vs микросервисы",
     ],
   };
 
@@ -177,7 +243,6 @@ export async function generateQuestionsForAllTopics(
     multipleCorrect: boolean;
   }> = [];
 
-  // Generate 2-3 questions per topic
   for (const topic of selectedTopics) {
     try {
       const questions = await generateQuestions(topic, difficulty, 2);
